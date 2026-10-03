@@ -73,10 +73,15 @@ export function sanitizeImageUrl(url) {
 // Sanitize regular text input (trims, removes control characters, caps max length)
 export function sanitizeText(str, maxLength = 300) {
   if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // remove ASCII control characters
-    .trim()
-    .slice(0, maxLength);
+  // Strip non-printable ASCII control characters safely without control regex warning
+  let clean = '';
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if ((code >= 32 && code !== 127) || code === 10 || code === 13 || code === 9 || code > 127) {
+      clean += str[i];
+    }
+  }
+  return clean.trim().slice(0, maxLength);
 }
 
 /**
@@ -189,6 +194,8 @@ export function validateAndSanitizeProject(rawItem) {
 
   const title = sanitizeText(rawItem.title || 'Proyek Tanpa Judul', 100);
   const author = sanitizeText(rawItem.author || 'Siswa RPL', 80);
+  const realName = sanitizeText(rawItem.realName || rawItem.author || 'Siswa RPL', 80);
+  const editPin = sanitizeText(rawItem.editPin || '', 10);
   const studentClass = ['X RPL 1', 'X RPL 2', 'X RPL 3'].includes(rawItem.studentClass) 
     ? rawItem.studentClass 
     : 'X RPL 1';
@@ -215,7 +222,9 @@ export function validateAndSanitizeProject(rawItem) {
       ? rawItem.id 
       : 'proj-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
     title,
-    author,
+    author, // Nama samaran / alias publik
+    realName, // Nama asli / panjang untuk mode siswa
+    editPin, // PIN keamanan untuk edit & hapus proyek
     studentClass,
     avatar: rawItem.avatar 
       ? (sanitizeImageUrl(rawItem.avatar) === '#' ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' : sanitizeImageUrl(rawItem.avatar))

@@ -1,0 +1,18 @@
+{
+  "name": "RPL X Vault • Showcase & Perpustakaan Proyek",
+  "short_name": "RPL Vault",
+  "description": "Showcase karya dan proyek koding siswa kelas 10 Rekayasa Perangkat Lunak.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#090d16",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -9,7 +9,11 @@ import ProjectDetailModal from './components/ProjectDetailModal';
 import SubmitProjectModal from './components/SubmitProjectModal';
 import GuideModal from './components/GuideModal';
 import IdeaGeneratorModal from './components/IdeaGeneratorModal';
+import RoleSelectModal from './components/RoleSelectModal';
 import Footer from './components/Footer';
+import SkeletonCard from './components/SkeletonCard';
+import ScrollToTop from './components/ScrollToTop';
+import Toast from './components/Toast';
 import { PlusIcon, BookOpenIcon, SparklesIcon } from './components/Icons';
 import { validateAndSanitizeProject } from './utils/security';
 import { 
@@ -24,12 +28,22 @@ import {
 const STORAGE_KEY_PROJECTS = 'rpl10_showcase_clean_v3';
 const STORAGE_KEY_STARS = 'rpl10_showcase_stars_v3';
 const STORAGE_KEY_THEME = 'rpl10_showcase_theme';
+const STORAGE_KEY_ROLE = 'rpl10_user_role'; // 'guest' | 'student'
 
 export default function App() {
   // Theme State
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem(STORAGE_KEY_THEME) || 'dark';
   });
+
+  // User Role State ('guest' or 'student')
+  const [userRole, setUserRole] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY_ROLE) || null;
+  });
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(() => {
+    return !localStorage.getItem(STORAGE_KEY_ROLE);
+  });
+  const [roleNotice, setRoleNotice] = useState('');
 
   // Projects State
   const [projects, setProjects] = useState(() => {
@@ -41,22 +55,28 @@ export default function App() {
           return parsed.map(validateAndSanitizeProject).filter(Boolean);
         }
       }
-    } catch (e) {
-      console.error("Error reading localStorage", e);
+    } catch {
+      console.error("Error reading localStorage");
     }
     return INITIAL_PROJECTS;
   });
 
   // Cloud State
   const [isCloudConnected, setIsCloudConnected] = useState(isSupabaseConfigured());
-  const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured());
+
+  // Toast Notification State
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ id: Date.now(), message, type });
+  };
 
   // Starred IDs
   const [starredIds, setStarredIds] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STARS);
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch {}
     return [];
   });
 
@@ -98,7 +118,7 @@ export default function App() {
 
     let isMounted = true;
     async function loadCloudData() {
-      setIsLoadingCloud(true);
+      setIsLoading(true);
       try {
         const cloudProjects = await fetchProjectsFromSupabase();
         if (isMounted && Array.isArray(cloudProjects)) {
@@ -110,7 +130,9 @@ export default function App() {
       } catch (err) {
         console.warn("Could not sync from Supabase:", err);
       } finally {
-        if (isMounted) setIsLoadingCloud(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -122,11 +144,31 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_STARS, JSON.stringify(starredIds));
-    } catch (e) {}
+    } catch {}
   }, [starredIds]);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Pilih Peran (Siswa vs Tamu)
+  const handleSelectRole = (role) => {
+    setUserRole(role);
+    localStorage.setItem(STORAGE_KEY_ROLE, role);
+    setRoleNotice('');
+    try {
+      triggerConfetti({ particleCount: 35, spread: 55 });
+    } catch {}
+  };
+
+  // Buka Submit dengan verifikasi Peran Siswa
+  const handleOpenSubmit = () => {
+    if (userRole !== 'student') {
+      setRoleNotice("Perhatian: Mode Tamu hanya untuk melihat karya siswa. Silakan verifikasi sebagai Siswa atau Guru X RPL untuk mendaftarkan proyek baru.");
+      setIsRoleModalOpen(true);
+      return;
+    }
+    setIsSubmitOpen(true);
   };
 
   // Toggle Star
@@ -137,7 +179,7 @@ export default function App() {
     if (!isAlreadyStarred) {
       try {
         triggerConfetti({ particleCount: 25, spread: 45 });
-      } catch (e) {}
+      } catch {}
       setStarredIds(prev => [...prev, projectId]);
       setProjects(prev => prev.map(p => {
         if (p.id === projectId) {
@@ -176,13 +218,15 @@ export default function App() {
     setProjects(prev => [newProj, ...prev]);
     try {
       triggerConfetti({ particleCount: 60, spread: 65 });
-    } catch (e) {}
+    } catch {}
+    showToast("Proyek berhasil didaftarkan ke showcase! 🎉", "success");
 
     if (isSupabaseConfigured()) {
       try {
         await insertProjectToSupabase(newProj);
       } catch (err) {
         console.warn("Could not sync new project to Supabase:", err);
+        showToast("Proyek tersimpan lokal, gagal sync ke cloud.", "error");
       }
     }
   };
@@ -192,25 +236,31 @@ export default function App() {
     if (selectedProject && selectedProject.id === updatedProj.id) {
       setSelectedProject(updatedProj);
     }
+    showToast("Perubahan proyek berhasil disimpan! ✅", "success");
 
     if (isSupabaseConfigured()) {
       try {
         await updateProjectInSupabase(updatedProj);
       } catch (err) {
         console.warn("Could not update project in Supabase:", err);
+        showToast("Proyek tersimpan lokal, gagal sync ke cloud.", "error");
       }
     }
   };
 
   const handleDeleteProject = async (projectId) => {
+    const projectToDelete = projects.find(p => p.id === projectId);
+    const pin = projectToDelete?.editPin || '';
+
     setProjects(prev => prev.filter(p => p.id !== projectId));
     if (selectedProject && selectedProject.id === projectId) {
       setSelectedProject(null);
     }
+    showToast("Proyek telah berhasil dihapus. 🗑️", "info");
 
     if (isSupabaseConfigured()) {
       try {
-        await deleteProjectFromSupabase(projectId);
+        await deleteProjectFromSupabase(projectId, pin);
       } catch (err) {
         console.warn("Could not delete project from Supabase:", err);
       }
@@ -218,6 +268,11 @@ export default function App() {
   };
 
   const handleEditProject = (project) => {
+    if (userRole !== 'student') {
+      setRoleNotice("Perhatian: Anda sedang dalam Mode Tamu. Silakan beralih ke Mode Siswa untuk mengedit proyek.");
+      setIsRoleModalOpen(true);
+      return;
+    }
     setEditingProject(project);
     setIsSubmitOpen(true);
   };
@@ -243,7 +298,8 @@ export default function App() {
     setProjects(merged);
     try {
       triggerConfetti({ particleCount: 40, spread: 50 });
-    } catch (e) {}
+    } catch {}
+    showToast(`${importedList.length} proyek berhasil diimpor! 📦`, "success");
   };
 
   const handleResetDefault = () => {
@@ -272,7 +328,7 @@ export default function App() {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = p.title?.toLowerCase().includes(q);
-        const matchesAuthor = p.author?.toLowerCase().includes(q);
+        const matchesAuthor = p.author?.toLowerCase().includes(q) || (userRole === 'student' && p.realName?.toLowerCase().includes(q));
         const matchesDesc = p.description?.toLowerCase().includes(q);
         const matchesTech = p.techStack?.some(t => t.toLowerCase().includes(q));
         if (!matchesTitle && !matchesAuthor && !matchesDesc && !matchesTech) return false;
@@ -287,7 +343,7 @@ export default function App() {
       if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
       return (b.id || '').localeCompare(a.id || '');
     });
-  }, [projects, searchQuery, selectedCategory, selectedClass, sortBy]);
+  }, [projects, searchQuery, selectedCategory, selectedClass, sortBy, userRole]);
 
   return (
     <div className="site-wrapper">
@@ -296,19 +352,21 @@ export default function App() {
       <Navbar 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onOpenSubmit={() => setIsSubmitOpen(true)}
+        onOpenSubmit={handleOpenSubmit}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenIdea={() => setIsIdeaOpen(true)}
         theme={theme}
         toggleTheme={toggleTheme}
         totalProjects={projects.length}
+        userRole={userRole || 'guest'}
+        onOpenRoleSelect={() => setIsRoleModalOpen(true)}
       />
 
       <main>
         {/* Clean Hero */}
         <StatsHero 
           projects={projects}
-          onOpenSubmit={() => setIsSubmitOpen(true)}
+          onOpenSubmit={handleOpenSubmit}
           onOpenGuide={() => setIsGuideOpen(true)}
           onOpenIdea={() => setIsIdeaOpen(true)}
           isCloudConnected={isCloudConnected}
@@ -328,8 +386,14 @@ export default function App() {
             counts={categoryCounts}
           />
 
-          {/* Project List / Empty State */}
-          {projects.length === 0 ? (
+          {/* Project List / Loading Skeleton / Empty State */}
+          {isLoading ? (
+            <div className="projects-clean-grid">
+              {[...Array(6)].map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          ) : projects.length === 0 ? (
             <div className="clean-empty-box">
               <div className="clean-empty-icon-wrap">
                 🌐
@@ -344,7 +408,7 @@ export default function App() {
                 <button 
                   type="button" 
                   className="btn-empty-primary"
-                  onClick={() => setIsSubmitOpen(true)}
+                  onClick={handleOpenSubmit}
                 >
                   <PlusIcon size={16} />
                   <span>Daftarkan Proyek Pertama</span>
@@ -381,15 +445,20 @@ export default function App() {
               </div>
             </div>
           ) : filteredProjects.length > 0 ? (
-            <div className="projects-clean-grid">
-              {filteredProjects.map(proj => (
+            <div 
+              key={`${selectedCategory}-${selectedClass}-${sortBy}-${searchQuery}`}
+              className="projects-clean-grid"
+            >
+              {filteredProjects.map((proj, idx) => (
                 <ProjectCard 
                   key={proj.id}
+                  index={idx}
                   project={proj}
                   onSelect={handleSelectProject}
                   onEdit={handleEditProject}
                   onToggleStar={handleToggleStar}
                   isStarred={starredIds.includes(proj.id)}
+                  userRole={userRole || 'guest'}
                 />
               ))}
             </div>
@@ -418,7 +487,7 @@ export default function App() {
       <Footer 
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenIdea={() => setIsIdeaOpen(true)}
-        onOpenSubmit={() => setIsSubmitOpen(true)}
+        onOpenSubmit={handleOpenSubmit}
       />
 
       {/* Modals */}
@@ -430,6 +499,8 @@ export default function App() {
           onDelete={handleDeleteProject}
           onToggleStar={handleToggleStar}
           isStarred={starredIds.includes(selectedProject.id)}
+          userRole={userRole || 'guest'}
+          onSwitchRole={() => setIsRoleModalOpen(true)}
         />
       )}
 
@@ -463,6 +534,25 @@ export default function App() {
           onUseIdea={handleUseIdea}
         />
       )}
+
+      {/* Role Selection Modal (Siswa vs Tamu) */}
+      <RoleSelectModal 
+        isOpen={isRoleModalOpen}
+        currentRole={userRole}
+        noticeMessage={roleNotice}
+        isForced={!userRole}
+        onSelectRole={handleSelectRole}
+        onClose={() => {
+          setIsRoleModalOpen(false);
+          setRoleNotice('');
+        }}
+      />
+
+      {/* Floating Scroll-to-Top Button */}
+      <ScrollToTop />
+
+      {/* Floating Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
     </div>
   );

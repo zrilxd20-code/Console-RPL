@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XIcon, SparklesIcon, RefreshCwIcon, CheckIcon, PlusIcon, ShareIcon } from './Icons';
+import { XIcon, RefreshCwIcon, CheckIcon, PlusIcon, ShareIcon } from './Icons';
 import { PROJECT_IDEAS } from '../data/projectIdeas';
 
 export default function IdeaGeneratorModal({ onClose, onUseIdea }) {

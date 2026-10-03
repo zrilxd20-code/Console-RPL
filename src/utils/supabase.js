@@ -28,6 +28,8 @@ export function mapRowToProject(row) {
     id: row.id,
     title: row.title,
     author: row.author,
+    realName: row.real_name || row.author,
+    editPin: row.edit_pin || '',
     studentClass: row.student_class,
     avatar: row.avatar,
     category: row.category,
@@ -52,6 +54,8 @@ export function mapProjectToRow(project) {
     id: project.id,
     title: project.title,
     author: project.author,
+    real_name: project.realName || project.author,
+    edit_pin: project.editPin || null,
     student_class: project.studentClass,
     avatar: project.avatar,
     category: project.category,
@@ -128,16 +132,17 @@ export async function updateProjectInSupabase(project) {
   try {
     const row = mapProjectToRow(project);
     const { data, error } = await supabase
-      .from('projects')
-      .update(row)
-      .eq('id', project.id)
-      .select();
+      .rpc('update_project_with_pin', {
+        p_id: project.id,
+        p_pin: project.editPin || '',
+        p_payload: row
+      });
 
     if (error) {
       console.error("Supabase update error:", error);
       throw error;
     }
-    return data?.[0] ? mapRowToProject(data[0]) : project;
+    return data ? mapRowToProject(data) : project;
   } catch (err) {
     console.error("Failed to update project in Supabase:", err);
     throw err;
@@ -147,14 +152,15 @@ export async function updateProjectInSupabase(project) {
 /**
  * Delete a project from Supabase database
  */
-export async function deleteProjectFromSupabase(projectId) {
+export async function deleteProjectFromSupabase(projectId, editPin = '') {
   if (!isSupabaseConfigured()) return false;
 
   try {
     const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', projectId);
+      .rpc('delete_project_with_pin', {
+        p_id: projectId,
+        p_pin: editPin
+      });
 
     if (error) {
       console.error("Supabase delete error:", error);
@@ -170,14 +176,13 @@ export async function deleteProjectFromSupabase(projectId) {
 /**
  * Update stars count in Supabase database
  */
-export async function updateStarsInSupabase(projectId, newStarsCount) {
+export async function updateStarsInSupabase(projectId, _newStarsCount) {
   if (!isSupabaseConfigured()) return false;
 
   try {
+    // Gunakan RPC increment_stars untuk menghindari race condition & error RLS
     const { error } = await supabase
-      .from('projects')
-      .update({ stars: newStarsCount })
-      .eq('id', projectId);
+      .rpc('increment_stars', { proj_id: projectId });
 
     if (error) {
       console.warn("Supabase stars update error:", error.message);
@@ -201,7 +206,7 @@ export async function uploadThumbnailToSupabase(blob, projectId) {
     const cleanId = (projectId || 'proj-' + Date.now()).replace(/[^a-zA-Z0-9-_]/g, '');
     const fileName = `${cleanId}-${Date.now()}.jpg`;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .storage
       .from('thumbnails')
       .upload(fileName, blob, {

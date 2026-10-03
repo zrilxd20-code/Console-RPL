@@ -7,17 +7,21 @@ import {
   ShareIcon, 
   CheckIcon,
   EditIcon,
-  TrashIcon 
+  TrashIcon,
+  ShieldIcon,
+  GraduationCapIcon
 } from './Icons';
 import { sanitizeUrl } from '../utils/security';
 
 export default function ProjectDetailModal({ 
   project, 
   onClose, 
-  onEdit,
-  onDelete,
+  onEdit, 
+  onDelete, 
   onToggleStar, 
-  isStarred 
+  isStarred,
+  userRole = 'guest',
+  onSwitchRole
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -33,15 +37,20 @@ export default function ProjectDetailModal({
   }, [onClose]);
 
   const isWip = project?.status === 'development';
+  const isStudent = userRole === 'student';
   const safeDemoUrl = sanitizeUrl(project?.demoUrl);
   const safeGithubUrl = project?.githubUrl ? sanitizeUrl(project.githubUrl) : null;
 
   if (!project) return null;
 
+  const displayName = isStudent 
+    ? (project.realName || project.author) 
+    : project.author;
+
   const handleShare = () => {
     const shareText = (safeDemoUrl && safeDemoUrl !== '#')
       ? safeDemoUrl
-      : `${project.title} karya ${project.author}`;
+      : `${project.title} karya ${displayName}`;
     
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(shareText);
@@ -57,12 +66,22 @@ export default function ProjectDetailModal({
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus proyek "${project.title}" karya ${project.author}?`)) {
-      if (onDelete) {
-        onDelete(project.id);
+    if (project.editPin) {
+      const enteredPin = window.prompt(`Masukkan PIN Pengaman Proyek (4 digit) untuk menghapus "${project.title}":`);
+      if (!enteredPin || enteredPin.trim() !== project.editPin.trim()) {
+        alert("PIN Pengaman salah! Proyek tidak dapat dihapus.");
+        return;
       }
-      onClose();
+    } else {
+      if (!window.confirm(`Apakah Anda yakin ingin menghapus proyek "${project.title}" karya ${displayName}?`)) {
+        return;
+      }
     }
+
+    if (onDelete) {
+      onDelete(project.id);
+    }
+    onClose();
   };
 
   return (
@@ -83,39 +102,76 @@ export default function ProjectDetailModal({
               <span className="clean-date">{project.submissionDate}</span>
             </div>
             <h2 className="detail-title">{project.title}</h2>
+            
             <div className="detail-author-line">
               <img 
                 src={project.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"} 
-                alt={project.author} 
+                alt={displayName} 
                 className="author-avatar-sm"
               />
-              <span className="author-name-text">{project.author}</span>
-              <span className="dot-sep">•</span>
-              <span className="author-class-sub">{project.studentClass}</span>
+              <div className="detail-author-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="author-name-text">{displayName}</span>
+                  {isStudent ? (
+                    <span className="badge-role-tag student-badge">
+                      <GraduationCapIcon size={11} /> Siswa Terverifikasi
+                    </span>
+                  ) : (
+                    <span className="badge-role-tag guest-badge">
+                      <ShieldIcon size={11} /> Nama Samaran (Privasi Aktif)
+                    </span>
+                  )}
+                </div>
+                <div className="author-class-sub">
+                  <span>{project.studentClass}</span>
+                  {isStudent && project.author && project.author !== project.realName && (
+                    <span> • Alias: @{project.author}</span>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Privacy notice for guest */}
+            {!isStudent && (
+              <div className="detail-guest-privacy-banner">
+                <ShieldIcon size={14} className="text-emerald" />
+                <span>
+                  <b>Privasi Siswa:</b> Nama asli disembunyikan dalam Mode Tamu. {' '}
+                  {onSwitchRole && (
+                    <button type="button" className="btn-link-inline" onClick={onSwitchRole}>
+                      Beralih ke Mode Siswa
+                    </button>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="detail-header-actions">
-            <button 
-              type="button"
-              className="btn-icon-subtle"
-              onClick={() => {
-                onClose();
-                onEdit(project);
-              }}
-              title="Edit / Perbarui Proyek Ini"
-            >
-              <EditIcon size={15} />
-            </button>
+            {isStudent && (
+              <>
+                <button 
+                  type="button"
+                  className="btn-icon-subtle"
+                  onClick={() => {
+                    onClose();
+                    onEdit(project);
+                  }}
+                  title="Edit / Perbarui Proyek Ini"
+                >
+                  <EditIcon size={15} />
+                </button>
 
-            <button 
-              type="button"
-              className="btn-icon-subtle btn-icon-danger"
-              onClick={handleDelete}
-              title="Hapus Proyek Ini"
-            >
-              <TrashIcon size={15} />
-            </button>
+                <button 
+                  type="button"
+                  className="btn-icon-subtle btn-icon-danger"
+                  onClick={handleDelete}
+                  title="Hapus Proyek Ini"
+                >
+                  <TrashIcon size={15} />
+                </button>
+              </>
+            )}
 
             <button 
               type="button"

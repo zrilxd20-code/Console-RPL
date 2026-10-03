@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   XIcon, 
-  PlusIcon, 
   DownloadIcon, 
   UploadIcon, 
   CheckIcon, 
-  EditIcon, 
-  TrashIcon 
+  TrashIcon,
+  ShieldIcon,
+  LockIcon
 } from './Icons';
 import { 
   sanitizeUrl, 
@@ -34,11 +34,13 @@ export default function SubmitProjectModal({
 }) {
   const isEditing = Boolean(initialProject);
   const [activeTab, setActiveTab] = useState('form'); // 'form' or 'manage'
-  const [thumbMode, setThumbMode] = useState('file'); // 'file' or 'url'
+  const [thumbMode, setThumbMode] = useState(() => (initialProject?.thumbnailUrl?.startsWith('http') ? 'url' : 'file'));
   const [successNotice, setSuccessNotice] = useState(false);
   const [importStatus, setImportStatus] = useState('');
   const [thumbnailBlob, setThumbnailBlob] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verifyPinInput, setVerifyPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   // Close modal on Escape key press
   useEffect(() => {
@@ -51,25 +53,13 @@ export default function SubmitProjectModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    studentClass: 'X RPL 1',
-    category: 'webapp',
-    status: 'completed', // 'development' or 'completed'
-    demoUrl: '',
-    githubUrl: '',
-    thumbnailUrl: '',
-    techStackInput: 'HTML5, CSS3, JavaScript',
-    description: '',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
-  });
-
-  useEffect(() => {
+  const [formData, setFormData] = useState(() => {
     if (initialProject) {
-      setFormData({
+      return {
         title: initialProject.title || '',
         author: initialProject.author || '',
+        realName: initialProject.realName || initialProject.author || '',
+        editPin: initialProject.editPin || '',
         studentClass: initialProject.studentClass || 'X RPL 1',
         category: initialProject.category || 'webapp',
         status: initialProject.status || 'completed',
@@ -79,20 +69,41 @@ export default function SubmitProjectModal({
         techStackInput: initialProject.techStack ? initialProject.techStack.join(', ') : '',
         description: initialProject.description || '',
         avatar: initialProject.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
-      });
-      if (initialProject.thumbnailUrl?.startsWith('http')) {
-        setThumbMode('url');
-      }
-    } else if (initialIdea) {
-      setFormData(prev => ({
-        ...prev,
-        title: initialIdea.title || '',
-        description: initialIdea.summary || '',
-        techStackInput: initialIdea.tech ? initialIdea.tech.join(', ') : prev.techStackInput,
-        status: 'development'
-      }));
+      };
     }
-  }, [initialProject, initialIdea]);
+    if (initialIdea) {
+      return {
+        title: initialIdea.title || '',
+        author: '',
+        realName: '',
+        editPin: '',
+        studentClass: 'X RPL 1',
+        category: 'webapp',
+        status: 'development',
+        demoUrl: '',
+        githubUrl: '',
+        thumbnailUrl: '',
+        techStackInput: initialIdea.tech ? initialIdea.tech.join(', ') : 'HTML5, CSS3, JavaScript',
+        description: initialIdea.summary || '',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
+      };
+    }
+    return {
+      title: '',
+      author: '',
+      realName: '',
+      editPin: '',
+      studentClass: 'X RPL 1',
+      category: 'webapp',
+      status: 'completed',
+      demoUrl: '',
+      githubUrl: '',
+      thumbnailUrl: '',
+      techStackInput: 'HTML5, CSS3, JavaScript',
+      description: '',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
+    };
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -157,6 +168,7 @@ export default function SubmitProjectModal({
         setImportStatus(`Berhasil mengimpor ${sanitizedProjects.length} proyek!`);
         setTimeout(() => setImportStatus(''), 4000);
       } catch (err) {
+        console.error("Failed to parse JSON file:", err);
         alert("Gagal membaca file JSON. Pastikan file tidak rusak.");
       }
     };
@@ -168,12 +180,23 @@ export default function SubmitProjectModal({
     if (isSubmitting) return;
 
     const title = sanitizeText(formData.title, 100);
-    const author = sanitizeText(formData.author, 80);
+    const author = sanitizeText(formData.author, 80); // Nama Samaran / Alias
+    const realName = sanitizeText(formData.realName || formData.author, 80); // Nama Asli
+    const editPin = sanitizeText(formData.editPin, 10);
     const rawDemo = formData.demoUrl.trim();
 
-    if (!title || !author || !rawDemo) {
-      alert("Mohon lengkapi Judul Proyek, Nama Siswa, dan Link Web Hosting!");
+    if (!title || !author || !realName || !rawDemo) {
+      alert("Mohon lengkapi Judul Proyek, Nama Asli, Nama Samaran, dan Link Web Hosting!");
       return;
+    }
+
+    // Jika mengedit proyek yang memiliki PIN keamanan, verifikasi PIN
+    if (isEditing && initialProject.editPin) {
+      if (!verifyPinInput.trim() || verifyPinInput.trim() !== initialProject.editPin.trim()) {
+        setPinError("PIN Pengaman salah! Masukkan PIN yang dibuat saat mendaftarkan proyek.");
+        alert("PIN Pengaman salah! Perubahan tidak dapat disimpan.");
+        return;
+      }
     }
 
     const sanitizedDemo = sanitizeUrl(rawDemo);
@@ -226,7 +249,9 @@ export default function SubmitProjectModal({
         const updatedProject = {
           ...initialProject,
           title,
-          author,
+          author, // Alias publik
+          realName, // Nama asli siswa
+          editPin: editPin || initialProject.editPin || '',
           studentClass: formData.studentClass,
           avatar: formData.avatar,
           category: formData.category,
@@ -244,7 +269,9 @@ export default function SubmitProjectModal({
         const newProject = {
           id: projId,
           title,
-          author,
+          author, // Alias publik
+          realName, // Nama asli siswa
+          editPin: editPin || '1234',
           studentClass: formData.studentClass,
           avatar: formData.avatar,
           category: formData.category,
@@ -275,10 +302,20 @@ export default function SubmitProjectModal({
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Hapus proyek "${formData.title}" dari galeri?`)) {
-      onDeleteProject(initialProject.id);
-      onClose();
+    if (initialProject.editPin) {
+      const enteredPin = window.prompt(`Masukkan PIN Pengaman Proyek untuk menghapus "${formData.title}":`);
+      if (!enteredPin || enteredPin.trim() !== initialProject.editPin.trim()) {
+        alert("PIN Pengaman salah! Proyek tidak dapat dihapus.");
+        return;
+      }
+    } else {
+      if (!window.confirm(`Hapus proyek "${formData.title}" dari galeri?`)) {
+        return;
+      }
     }
+
+    onDeleteProject(initialProject.id);
+    onClose();
   };
 
   return (
@@ -354,21 +391,74 @@ export default function SubmitProjectModal({
               </span>
             </div>
 
-            {/* Pembuat */}
+            {/* Jika sedang mengedit proyek dengan PIN, minta verifikasi PIN terlebih dahulu */}
+            {isEditing && initialProject.editPin && (
+              <div className="field-group highlight-field pin-verify-box">
+                <label htmlFor="input-verify-pin" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b' }}>
+                  <LockIcon size={14} />
+                  Verifikasi Kepemilikan: Masukkan PIN Proyek *
+                </label>
+                <input 
+                  id="input-verify-pin"
+                  type="password"
+                  maxLength="10"
+                  placeholder="Ketik PIN saat pembuatan proyek..."
+                  value={verifyPinInput}
+                  onChange={(e) => {
+                    setVerifyPinInput(e.target.value);
+                    if (pinError) setPinError('');
+                  }}
+                  required
+                />
+                {pinError && <span className="field-error-msg" style={{ color: '#ef4444', fontSize: '12px' }}>{pinError}</span>}
+                <span className="field-hint">
+                  Hanya pembuat proyek yang memiliki PIN ini yang dapat menyimpan perubahan atau menghapus proyek.
+                </span>
+              </div>
+            )}
+
+            {/* Identitas Pembuat: Nama Asli vs Nama Samaran */}
             <div className="form-row-2">
               <div className="field-group">
-                <label htmlFor="input-author">Nama Siswa *</label>
+                <label htmlFor="input-real-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldIcon size={13} />
+                  Nama Asli / Panjang Siswa *
+                </label>
+                <input 
+                  id="input-real-name"
+                  name="realName"
+                  type="text"
+                  required
+                  placeholder="Contoh: Muhammad Budi Santoso"
+                  value={formData.realName}
+                  onChange={handleChange}
+                />
+                <span className="field-hint">
+                  🔒 <b>Privasi Terjaga:</b> Hanya terlihat oleh Siswa & Guru di Mode Siswa.
+                </span>
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="input-author">
+                  Nama Samaran / Alias (Callsign) *
+                </label>
                 <input 
                   id="input-author"
                   name="author"
                   type="text"
                   required
-                  placeholder="Contoh: Budi Santoso"
+                  placeholder="Contoh: BudiDev / BudiCode"
                   value={formData.author}
                   onChange={handleChange}
                 />
+                <span className="field-hint">
+                  🌐 <b>Publik:</b> Nama samaran ini yang dilihat oleh pengunjung umum / Tamu.
+                </span>
               </div>
+            </div>
 
+            {/* Kelas & PIN Pengaman Proyek */}
+            <div className="form-row-2">
               <div className="field-group">
                 <label htmlFor="select-class">Kelas *</label>
                 <select 
@@ -381,6 +471,26 @@ export default function SubmitProjectModal({
                   <option value="X RPL 2">X RPL 2</option>
                   <option value="X RPL 3">X RPL 3</option>
                 </select>
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="input-edit-pin" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <LockIcon size={13} />
+                  PIN Pengaman Proyek (4-6 digit) *
+                </label>
+                <input 
+                  id="input-edit-pin"
+                  name="editPin"
+                  type="text"
+                  maxLength="6"
+                  required={!isEditing}
+                  placeholder="Contoh: 1234"
+                  value={formData.editPin}
+                  onChange={handleChange}
+                />
+                <span className="field-hint">
+                  🔑 Dibutuhkan untuk mengedit/menghapus proyek agar tidak diubah siswa lain.
+                </span>
               </div>
             </div>
 

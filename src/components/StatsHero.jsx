@@ -1,5 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, BookOpenIcon, SparklesIcon } from './Icons';
+
+/**
+ * Custom lightweight hook for smooth count-up animation
+ */
+function useCountUp(targetNumber, duration = 1200) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const end = parseInt(targetNumber, 10) || 0;
+    if (end === 0) {
+      const id = requestAnimationFrame(() => setCount(0));
+      return () => cancelAnimationFrame(id);
+    }
+
+    const startTime = performance.now();
+
+    const updateCount = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutExpo curve for smooth deceleration
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = Math.floor(easeProgress * end);
+      setCount(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(updateCount);
+      } else {
+        setCount(end);
+      }
+    };
+
+    const animFrame = requestAnimationFrame(updateCount);
+    return () => cancelAnimationFrame(animFrame);
+  }, [targetNumber, duration]);
+
+  return count;
+}
 
 export default function StatsHero({ 
   projects, 
@@ -12,25 +49,49 @@ export default function StatsHero({
   const uniqueAuthors = new Set(projects.map(p => p.author)).size;
   const totalStars = projects.reduce((acc, curr) => acc + (curr.stars || 0), 0);
 
+  // Animated numbers
+  const animatedProjects = useCountUp(totalProjects);
+  const animatedAuthors = useCountUp(uniqueAuthors);
+  const animatedStars = useCountUp(totalStars);
+
   return (
     <section className="hero-clean-section">
-      <div className="container">
+      {/* Decorative Floating Code Elements */}
+      <div className="hero-float-decor decor-top-left" aria-hidden="true">
+        <span className="decor-tag">&lt;code&gt;</span>
+        <span className="decor-code">const rpl = "innovative";</span>
+      </div>
+
+      <div className="hero-float-decor decor-top-right" aria-hidden="true">
+        <span className="decor-sparkle">✦</span>
+        <span className="decor-status">deploy: <strong>live</strong></span>
+      </div>
+
+      <div className="hero-float-decor decor-bottom-left" aria-hidden="true">
+        <span className="decor-comment">// karya koding generasi muda</span>
+      </div>
+
+      <div className="hero-float-decor decor-bottom-right" aria-hidden="true">
+        <span className="decor-chip">&#123; git: "push" &#125;</span>
+      </div>
+
+      <div className="container hero-container-rel">
         
-        {/* Simple Label */}
-        <div className="hero-class-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span>Jurusan Rekayasa Perangkat Lunak • Kelas 10</span>
-          <span style={{ opacity: 0.5 }}>•</span>
-          <span style={{ 
-            color: isCloudConnected ? '#10b981' : '#f59e0b',
-            fontWeight: 700 
-          }}>
-            {isCloudConnected ? '☁️ Supabase Cloud Aktif' : '💾 Penyimpanan Lokal (Offline)'}
+        {/* Simple Label & Cloud Status */}
+        <div className="hero-class-tag">
+          <span className="hero-badge-pill">Jurusan Rekayasa Perangkat Lunak</span>
+          <span className="hero-badge-dot">•</span>
+          <span>Kelas 10 RPL</span>
+          <span className="hero-badge-dot">•</span>
+          <span className={`hero-cloud-status ${isCloudConnected ? 'status-cloud-active' : 'status-cloud-offline'}`}>
+            <span className="status-live-indicator"></span>
+            {isCloudConnected ? 'Supabase Cloud Aktif' : 'Penyimpanan Lokal'}
           </span>
         </div>
 
-        {/* Heading */}
+        {/* Heading with Gradient Text */}
         <h1 className="hero-clean-title">
-          Showcase Karya Koding Siswa
+          Showcase Karya <span className="hero-title-gradient">Koding Siswa</span>
         </h1>
 
         {/* Subtitle */}
@@ -71,25 +132,40 @@ export default function StatsHero({
           </button>
         </div>
 
-        {/* Minimal Clean Stats */}
+        {/* Premium Stats Strip with Count-up */}
         <div className="stats-clean-strip">
           <div className="stat-clean-item">
-            <span className="stat-clean-number">{totalProjects}</span>
-            <span className="stat-clean-label">Proyek Terdaftar</span>
+            <div className="stat-icon-wrap stat-icon-blue">
+              💻
+            </div>
+            <div className="stat-text-wrap">
+              <span className="stat-clean-number">{animatedProjects}</span>
+              <span className="stat-clean-label">Proyek Terdaftar</span>
+            </div>
           </div>
 
           <div className="stat-clean-divider"></div>
 
           <div className="stat-clean-item">
-            <span className="stat-clean-number">{uniqueAuthors}</span>
-            <span className="stat-clean-label">Siswa Kontributor</span>
+            <div className="stat-icon-wrap stat-icon-purple">
+              👥
+            </div>
+            <div className="stat-text-wrap">
+              <span className="stat-clean-number">{animatedAuthors}</span>
+              <span className="stat-clean-label">Siswa Kontributor</span>
+            </div>
           </div>
 
           <div className="stat-clean-divider"></div>
 
           <div className="stat-clean-item">
-            <span className="stat-clean-number">{totalStars}</span>
-            <span className="stat-clean-label">Total Apresiasi Bintang</span>
+            <div className="stat-icon-wrap stat-icon-amber">
+              ⭐
+            </div>
+            <div className="stat-text-wrap">
+              <span className="stat-clean-number">{animatedStars}</span>
+              <span className="stat-clean-label">Total Apresiasi Bintang</span>
+            </div>
           </div>
         </div>
 

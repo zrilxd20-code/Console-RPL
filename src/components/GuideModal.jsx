@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XIcon, ExternalLinkIcon } from './Icons';
+import { XIcon } from './Icons';
 
 export default function GuideModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('vercel');

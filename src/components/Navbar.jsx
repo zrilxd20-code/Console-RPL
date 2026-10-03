@@ -7,7 +7,9 @@ import {
   SearchIcon, 
   XIcon, 
   MoonIcon, 
-  SunIcon 
+  SunIcon,
+  UserIcon,
+  GraduationCapIcon
 } from './Icons';
 
 export default function Navbar({ 
@@ -18,7 +20,9 @@ export default function Navbar({
   onOpenIdea, 
   theme, 
   toggleTheme,
-  totalProjects 
+  totalProjects,
+  userRole = 'guest',
+  onOpenRoleSelect
 }) {
   return (
     <header className="navbar-root">
@@ -87,9 +91,31 @@ export default function Navbar({
               type="button"
               className="btn-nav-action" 
               onClick={onOpenSubmit}
+              title="Daftarkan Proyek Kamu"
             >
               <PlusIcon size={15} />
-              <span>Daftarkan Proyek</span>
+              <span className="hide-on-small">Daftarkan Proyek</span>
+            </button>
+
+            {/* Role Switcher Button */}
+            <button
+              id="btn-role-badge"
+              type="button"
+              className={`btn-role-indicator ${userRole === 'student' ? 'is-student' : 'is-guest'}`}
+              onClick={onOpenRoleSelect}
+              title={`Mode Akses: ${userRole === 'student' ? 'Siswa / Guru (Klik untuk ganti)' : 'Tamu / Anonim (Klik untuk ganti)'}`}
+            >
+              {userRole === 'student' ? (
+                <>
+                  <GraduationCapIcon size={14} />
+                  <span className="role-lbl-text">Siswa RPL</span>
+                </>
+              ) : (
+                <>
+                  <UserIcon size={14} />
+                  <span className="role-lbl-text">Mode Tamu</span>
+                </>
+              )}
             </button>
 
             {/* Theme Switcher */}
