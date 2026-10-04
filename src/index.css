@@ -2882,12 +2882,23 @@ body {
   }
 }
 
+/* Mobile Bottom Navigation Bar Base (Hidden on Desktop) */
+.mobile-bottom-nav {
+  display: none;
+}
+
 /* Mobile Breakpoint (max-width: 768px) */
 @media (max-width: 768px) {
   .hide-on-small { display: none !important; }
+  .nav-desktop-only { display: none !important; }
   .role-lbl-text { display: none !important; }
   .brand-sub-badge { display: none !important; }
   .container { padding: 0 16px; }
+
+  /* Body bottom spacing for bottom navigation bar */
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
 
   /* 1 Column on Mobile to prevent card overflow */
   .projects-clean-grid {
@@ -2906,8 +2917,132 @@ body {
   .stats-clean-strip { flex-direction: column; border-radius: var(--radius-md); }
   .stat-clean-divider { display: none; }
   .role-cards-grid { grid-template-columns: 1fr; }
-  .btn-scroll-top { bottom: 18px; right: 18px; width: 38px; height: 38px; }
-  .toast-notification-root { bottom: 16px; right: 16px; left: 16px; max-width: none; }
+
+  /* Float elements positioned above bottom bar */
+  .btn-scroll-top { 
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important; 
+    right: 16px; 
+    width: 38px; 
+    height: 38px; 
+  }
+  .toast-notification-root { 
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important; 
+    right: 16px; 
+    left: 16px; 
+    max-width: none; 
+  }
+
+  /* =========================================================
+     MOBILE BOTTOM BAR (App Dock Experience)
+     ========================================================= */
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(13, 18, 30, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-subtle);
+    z-index: 995;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  [data-theme="light"] .mobile-bottom-nav {
+    background: rgba(255, 251, 245, 0.95);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.06);
+  }
+
+  .bottom-nav-item {
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 4px;
+    flex: 1;
+    max-width: 68px;
+    transition: color 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-item:hover,
+  .bottom-nav-item:active {
+    color: var(--text-main);
+  }
+
+  .bottom-nav-item.is-student-active {
+    color: #10b981;
+  }
+
+  .bottom-nav-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  .bottom-role-dot {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg-page);
+  }
+
+  .bottom-role-dot.dot-student {
+    background: #10b981;
+  }
+
+  .bottom-role-dot.dot-guest {
+    background: #64748b;
+  }
+
+  /* Center Highlighted Action Button (Daftarkan) */
+  .bottom-nav-center-action {
+    color: var(--text-main);
+  }
+
+  .bottom-nav-center-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -20px;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+    border: 3px solid var(--bg-page);
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+  }
+
+  .bottom-nav-center-action:active .bottom-nav-center-bubble {
+    transform: scale(0.92);
+  }
+
+  .bottom-nav-label {
+    letter-spacing: -0.1px;
+    line-height: 1;
+  }
 }
 
 /* Small Mobile & Smartphones (max-width: 640px) */

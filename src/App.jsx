@@ -14,6 +14,7 @@ import Footer from './components/Footer';
 import SkeletonCard from './components/SkeletonCard';
 import ScrollToTop from './components/ScrollToTop';
 import Toast from './components/Toast';
+import MobileBottomNav from './components/MobileBottomNav';
 import { PlusIcon, BookOpenIcon, SparklesIcon } from './components/Icons';
 import { validateAndSanitizeProject } from './utils/security';
 import { 
@@ -313,6 +314,17 @@ export default function App() {
     setIsSubmitOpen(true);
   };
 
+  const handleFocusSearch = () => {
+    const el = document.getElementById('katalog-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const input = document.getElementById('navbar-search-input');
+    if (input) {
+      setTimeout(() => input.focus(), 350);
+    }
+  };
+
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { all: projects.length };
@@ -546,6 +558,16 @@ export default function App() {
           setIsRoleModalOpen(false);
           setRoleNotice('');
         }}
+      />
+
+      {/* Mobile App Bottom Navigation Bar */}
+      <MobileBottomNav 
+        onOpenSubmit={handleOpenSubmit}
+        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenIdea={() => setIsIdeaOpen(true)}
+        onOpenRoleSelect={() => setIsRoleModalOpen(true)}
+        userRole={userRole || 'guest'}
+        onFocusSearch={handleFocusSearch}
       />
 
       {/* Floating Scroll-to-Top Button */}

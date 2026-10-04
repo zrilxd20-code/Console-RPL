@@ -67,7 +67,7 @@ export default function Navbar({
             <button 
               id="btn-nav-ide"
               type="button"
-              className="btn-nav-link" 
+              className="btn-nav-link nav-desktop-only" 
               onClick={onOpenIdea}
               title="Inspirasi ide project"
             >
@@ -78,7 +78,7 @@ export default function Navbar({
             <button 
               id="btn-nav-guide"
               type="button"
-              className="btn-nav-link" 
+              className="btn-nav-link nav-desktop-only" 
               onClick={onOpenGuide}
               title="Panduan cara hosting web"
             >
@@ -89,7 +89,7 @@ export default function Navbar({
             <button 
               id="btn-nav-submit"
               type="button"
-              className="btn-nav-action" 
+              className="btn-nav-action nav-desktop-only" 
               onClick={onOpenSubmit}
               title="Daftarkan Proyek Kamu"
             >
@@ -101,7 +101,7 @@ export default function Navbar({
             <button
               id="btn-role-badge"
               type="button"
-              className={`btn-role-indicator ${userRole === 'student' ? 'is-student' : 'is-guest'}`}
+              className={`btn-role-indicator nav-desktop-only ${userRole === 'student' ? 'is-student' : 'is-guest'}`}
               onClick={onOpenRoleSelect}
               title={`Mode Akses: ${userRole === 'student' ? 'Siswa / Guru (Klik untuk ganti)' : 'Tamu / Anonim (Klik untuk ganti)'}`}
             >
