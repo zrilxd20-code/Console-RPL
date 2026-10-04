@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserIcon, GraduationCapIcon, ShieldIcon, LockIcon, XIcon, CheckIcon } from './Icons';
 
-export const PASSCODE_STUDENT = 'RPL10'; // Passcode kelas default
+const PASSCODE_STUDENT = (import.meta.env.VITE_STUDENT_PASSCODE || 'RPL10').trim().toUpperCase();
 
 export default function RoleSelectModal({
   isOpen,
@@ -27,12 +27,13 @@ export default function RoleSelectModal({
     const cleanInput = passcode.trim().toUpperCase();
     
     // Verifikasi passcode kelas (case-insensitive)
-    if (cleanInput === PASSCODE_STUDENT || cleanInput === 'XRPL' || cleanInput === '10RPL') {
+    const validCodes = [PASSCODE_STUDENT, 'XRPL', '10RPL'];
+    if (validCodes.includes(cleanInput)) {
       setErrorMsg('');
       onSelectRole('student');
       onClose();
     } else {
-      setErrorMsg(`Passcode salah! Gunakan kode kelas: "${PASSCODE_STUDENT}"`);
+      setErrorMsg('Passcode salah! Silakan periksa kembali atau tanyakan ke pengurus kelas.');
     }
   };
 
@@ -159,14 +160,14 @@ export default function RoleSelectModal({
               <div className="passcode-input-row">
                 <input 
                   id="student-passcode-input"
-                  type="text" 
-                  placeholder={`Ketik: ${PASSCODE_STUDENT}`}
+                  type="password" 
+                  placeholder="Masukkan passcode kelas..."
                   value={passcode}
                   onChange={(e) => {
                     setPasscode(e.target.value);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  autoComplete="off"
+                  autoComplete="current-password"
                 />
                 <button type="submit" className="btn-verify-student">
                   Verifikasi
@@ -175,7 +176,7 @@ export default function RoleSelectModal({
               {errorMsg ? (
                 <span className="passcode-err-text">{errorMsg}</span>
               ) : (
-                <span className="passcode-hint-text">💡 Kode default: <b>{PASSCODE_STUDENT}</b></span>
+                <span className="passcode-hint-text">🔒 Dapatkan passcode dari guru atau pengurus kelas X RPL</span>
               )}
             </form>
           </div>
