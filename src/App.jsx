@@ -122,14 +122,38 @@ export default function App() {
       setIsLoading(true);
       try {
         const cloudProjects = await fetchProjectsFromSupabase();
-        if (isMounted && Array.isArray(cloudProjects)) {
-          if (cloudProjects.length > 0) {
-            setProjects(cloudProjects);
+        if (isMounted) {
+          if (Array.isArray(cloudProjects)) {
+            setIsCloudConnected(true);
+            if (cloudProjects.length > 0) {
+              setProjects(cloudProjects);
+            } else {
+              // Jika di cloud masih kosong tapi ada data proyek di penyimpanan lokal, otomatis unggah ke Supabase
+              const localSaved = localStorage.getItem(STORAGE_KEY_PROJECTS);
+              if (localSaved) {
+                try {
+                  const parsedLocal = JSON.parse(localSaved);
+                  if (Array.isArray(parsedLocal) && parsedLocal.length > 0) {
+                    for (const p of parsedLocal) {
+                      try {
+                        await insertProjectToSupabase(p);
+                      } catch {}
+                    }
+                    const refreshed = await fetchProjectsFromSupabase();
+                    if (refreshed && refreshed.length > 0) {
+                      setProjects(refreshed);
+                    }
+                  }
+                } catch {}
+              }
+            }
+          } else {
+            setIsCloudConnected(false);
           }
-          setIsCloudConnected(true);
         }
       } catch (err) {
         console.warn("Could not sync from Supabase:", err);
+        if (isMounted) setIsCloudConnected(false);
       } finally {
         if (isMounted) {
           setIsLoading(false);

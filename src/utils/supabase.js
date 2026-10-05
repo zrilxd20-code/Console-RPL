@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { validateAndSanitizeProject } from './security';
 
-const rawUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const DEFAULT_SUPABASE_URL = 'https://ydwccsnbsbwpcekeoiqs.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_W9827K4Z9wPk3wUsXtBKoQ_vO-fCZgb';
+
+const rawUrl = (import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
 const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim();
 
 // Validate if user has configured valid Supabase keys
 export const isSupabaseConfigured = () => {
